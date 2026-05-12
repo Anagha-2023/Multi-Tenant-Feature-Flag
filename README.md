@@ -535,18 +535,3 @@ Estimated development time: **6-8 hours**
 - Frontend applications: 2-3 hours
 - Documentation: 1 hour
 
-## 🤝 Contributing
-
-This is an assignment project, but suggestions for improvements are welcome!
-
-## 📄 License
-
-This project is for educational/assessment purposes.
-
-## 👤 Author
-
-Created as part of a technical assessment assignment.
-
----
-
-**Note**: This system is designed for development and demonstration purposes. Additional security hardening and production optimizations would be required for real-world deployment.
