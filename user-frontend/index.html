@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feature Checker - Feature Flag System</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 500px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #4facfe;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #4facfe;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #3a9ae8;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    .result.show {
+      display: block;
+    }
+
+    .result.enabled {
+      background: #d4edda;
+      border: 2px solid #28a745;
+    }
+
+    .result.disabled {
+      background: #f8d7da;
+      border: 2px solid #dc3545;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .result-icon {
+      font-size: 32px;
+    }
+
+    .result-title {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .result.enabled .result-title {
+      color: #155724;
+    }
+
+    .result.disabled .result-title {
+      color: #721c24;
+    }
+
+    .result-info {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 5px;
+    }
+
+    .result-info p {
+      margin: 5px 0;
+      color: #333;
+    }
+
+    .result-info strong {
+      color: #555;
+    }
+
+    .hint {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    .hint strong {
+      color: #856404;
+    }
+
+    .hint p {
+      color: #856404;
+      margin: 5px 0;
+      font-size: 14px;
+    }
+
+    .loading {
+      text-align: center;
+      color: #666;
+      margin-top: 20px;
+    }
+
+    .error {
+      background: #fee;
+      color: #c33;
+      border: 1px solid #fcc;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Feature Flag Checker</h1>
+    <p class="subtitle">Check if a feature is enabled for your organization</p>
+
+    <div class="hint">
+      <strong>ℹ️ How to use:</strong>
+      <p>1. Get your Organization ID from your admin</p>
+      <p>2. Enter the feature key you want to check</p>
+      <p>3. Click "Check Feature" to see if it's enabled</p>
+    </div>
+
+    <form id="checkForm">
+      <div class="form-group">
+        <label for="organizationId">Organization ID</label>
+        <input 
+          type="text" 
+          id="organizationId" 
+          required 
+          placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
+        >
+      </div>
+      <div class="form-group">
+        <label for="featureKey">Feature Key</label>
+        <input 
+          type="text" 
+          id="featureKey" 
+          required 
+          placeholder="e.g., dark_mode, new_dashboard"
+        >
+      </div>
+      <button type="submit">Check Feature</button>
+    </form>
+
+    <div id="loading" class="loading" style="display: none;">
+      Checking feature status...
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+
+    <div id="result" class="result">
+      <div class="result-header">
+        <div class="result-icon"></div>
+        <div class="result-title"></div>
+      </div>
+      <div class="result-info">
+        <p><strong>Organization ID:</strong> <span id="resultOrgId"></span></p>
+        <p><strong>Feature Key:</strong> <span id="resultFeatureKey"></span></p>
+        <p id="resultDescription"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api';
+
+    document.getElementById('checkForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const organizationId = document.getElementById('organizationId').value.trim();
+      const featureKey = document.getElementById('featureKey').value.trim();
+
+      // Hide previous results
+      document.getElementById('result').classList.remove('show');
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('loading').style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_URL}/feature-flags/check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ organizationId, featureKey })
+        });
+
+        const data = await response.json();
+        document.getElementById('loading').style.display = 'none';
+
+        if (response.ok) {
+          displayResult(data);
+        } else {
+          showError(data.error || 'Failed to check feature flag');
+        }
+      } catch (error) {
+        document.getElementById('loading').style.display = 'none';
+        showError('Failed to connect to server. Please make sure the backend is running.');
+      }
+    });
+
+    function displayResult(data) {
+      const result = document.getElementById('result');
+      const icon = result.querySelector('.result-icon');
+      const title = result.querySelector('.result-title');
+      
+      // Remove previous classes
+      result.classList.remove('enabled', 'disabled');
+      
+      // Set new state
+      if (data.enabled) {
+        result.classList.add('enabled');
+        icon.textContent = '✅';
+        title.textContent = 'Feature Enabled';
+      } else {
+        result.classList.add('disabled');
+        icon.textContent = '❌';
+        title.textContent = 'Feature Disabled';
+      }
+
+      // Set info
+      document.getElementById('resultOrgId').textContent = data.organizationId;
+      document.getElementById('resultFeatureKey').textContent = data.featureKey;
+      
+      const descriptionEl = document.getElementById('resultDescription');
+      if (data.description) {
+        descriptionEl.innerHTML = `<strong>Description:</strong> ${data.description}`;
+        descriptionEl.style.display = 'block';
+      } else if (data.message) {
+        descriptionEl.innerHTML = `<strong>Note:</strong> ${data.message}`;
+        descriptionEl.style.display = 'block';
+      } else {
+        descriptionEl.style.display = 'none';
+      }
+
+      // Show result
+      result.classList.add('show');
+    }
+
+    function showError(message) {
+      const error = document.getElementById('error');
+      error.textContent = message;
+      error.style.display = 'block';
+    }
+
+    // Load from URL parameters if present
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const orgId = params.get('orgId');
+      const featureKey = params.get('feature');
+      
+      if (orgId) document.getElementById('organizationId').value = orgId;
+      if (featureKey) document.getElementById('featureKey').value = featureKey;
+    });
+  </script>
+</body>
+</html>
